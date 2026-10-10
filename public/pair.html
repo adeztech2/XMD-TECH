@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>XMD-TECH · Pair Your WhatsApp</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:      #070d16;
+  --bg2:     #0b1421;
+  --bg3:     #0f1b2e;
+  --card:    #0d1929;
+  --border:  #162236;
+  --border2: #1e3352;
+  --cyan:    #00e5ff;
+  --purple:  #7b2fff;
+  --green:   #00ff94;
+  --yellow:  #ffd600;
+  --red:     #ff4d6d;
+  --text:    #e2f0fd;
+  --muted:   #6a90b0;
+  --font:    'Space Grotesk', sans-serif;
+  --mono:    'JetBrains Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+  overflow-x: hidden;
+}
+
+/* Grid bg */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,229,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none; z-index: 0;
+}
+
+/* Glow orbs */
+body::after {
+  content: '';
+  position: fixed;
+  top: -200px; left: 50%; transform: translateX(-50%);
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(123,47,255,.12) 0%, transparent 65%);
+  pointer-events: none; z-index: 0;
+}
+
+* { position: relative; z-index: 1; }
+
+/* NAV */
+nav {
+  width: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 32px;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+  background: rgba(7,13,22,.85);
+  position: sticky; top: 0; z-index: 100;
+}
+.logo {
+  font-family: var(--mono);
+  font-size: 16px; font-weight: 600;
+  color: var(--cyan);
+  letter-spacing: 2px;
+  display: flex; align-items: center; gap: 10px;
+}
+.logo-pulse {
+  width: 8px; height: 8px;
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--green);
+  animation: blink 2s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.nav-tag {
+  background: rgba(0,229,255,.08);
+  border: 1px solid rgba(0,229,255,.2);
+  color: var(--cyan);
+  font-size: 11px; font-family: var(--mono); font-weight: 600;
+  padding: 5px 14px; border-radius: 20px; letter-spacing: 1px;
+}
+
+/* HERO */
+.hero {
+  text-align: center;
+  padding: 64px 24px 40px;
+  max-width: 560px;
+  width: 100%;
+}
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(123,47,255,.1);
+  border: 1px solid rgba(123,47,255,.3);
+  color: #b98aff;
+  font-size: 11px; font-family: var(--mono); letter-spacing: 2px; font-weight: 600;
+  padding: 6px 16px; border-radius: 20px;
+  margin-bottom: 24px;
+}
+.hero h1 {
+  font-size: clamp(32px, 7vw, 52px);
+  font-weight: 700; letter-spacing: -1.5px; line-height: 1.05;
+  margin-bottom: 16px;
+}
+.hero h1 span {
+  background: linear-gradient(135deg, var(--cyan), var(--purple));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.hero p {
+  color: var(--muted); font-size: 15px; line-height: 1.7;
+  max-width: 440px; margin: 0 auto 40px;
+}
+
+/* STEPS INDICATOR */
+.steps-row {
+  display: flex; align-items: center; justify-content: center; gap: 0;
+  margin-bottom: 40px;
+}
+.step-item {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.step-circle {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--border2);
+  background: var(--bg3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: var(--muted);
+  transition: all .3s;
+}
+.step-circle.active {
+  border-color: var(--cyan);
+  background: rgba(0,229,255,.12);
+  color: var(--cyan);
+  box-shadow: 0 0 16px rgba(0,229,255,.25);
+}
+.step-circle.done {
+  border-color: var(--green);
+  background: rgba(0,255,148,.1);
+  color: var(--green);
+}
+.step-label {
+  font-size: 10px; color: var(--muted); letter-spacing: .5px; font-weight: 500;
+  white-space: nowrap;
+}
+.step-label.active { color: var(--cyan); }
+.step-label.done   { color: var(--green); }
+.step-line {
+  width: 60px; height: 2px;
+  background: var(--border2);
+  margin-bottom: 20px;
+  transition: background .3s;
+}
+.step-line.done { background: var(--green); }
+
+/* CARD */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 36px 32px;
+  width: 100%; max-width: 480px;
+  margin: 0 auto 32px;
+}
+
+/* PANELS */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* FORM */
+.field-label {
+  font-size: 12px; font-weight: 600; letter-spacing: .5px;
+  color: var(--muted); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.input-wrap {
+  display: flex; align-items: stretch;
+  background: var(--bg3);
+  border: 1.5px solid var(--border2);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.input-wrap:focus-within { border-color: var(--cyan); }
+.flag-prefix {
+  background: rgba(0,229,255,.06);
+  border-right: 1px solid var(--border2);
+  padding: 0 16px;
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 14px; font-weight: 600;
+  color: var(--cyan); white-space: nowrap;
+  cursor: pointer; user-select: none;
+}
+.phone-input {
+  flex: 1;
+  background: transparent;
+  border: none; outline: none;
+  padding: 16px 16px;
+  color: var(--text);
+  font-family: var(--mono); font-size: 16px;
+  letter-spacing: 1px;
+}
+.phone-input::placeholder { color: var(--muted); letter-spacing: 0; font-size: 14px; }
+
+/* Country selector */
+.country-dropdown {
+  position: absolute; top: calc(100% + 8px); left: 0;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 12px; overflow: hidden;
+  width: 200px; z-index: 200;
+  display: none; box-shadow: 0 16px 40px rgba(0,0,0,.5);
+}
+.country-dropdown.open { display: block; }
+.country-opt {
+  padding: 10px 16px; cursor: pointer;
+  font-size: 13px; font-family: var(--mono);
+  color: var(--text); display: flex; align-items: center; gap: 10px;
+  transition: background .15s;
+}
+.country-opt:hover { background: rgba(0,229,255,.06); }
+.country-opt .dial { color: var(--cyan); font-weight: 600; }
+.flag-wrap { position: relative; }
+
+/* METHOD TOGGLE */
+.method-row {
+  display: flex; gap: 8px; margin: 20px 0;
+}
+.method-btn {
+  flex: 1; padding: 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border2);
+  background: transparent;
+  color: var(--muted); font-family: var(--font); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .2s; text-align: center;
+}
+.method-btn.active {
+  border-color: var(--cyan);
+  background: rgba(0,229,255,.08);
+  color: var(--cyan);
+}
+
+/* SUBMIT BTN */
+.btn-submit {
+  width: 100%; padding: 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--purple), var(--cyan));
+  border: none; cursor: pointer;
+  font-family: var(--font); font-size: 15px; font-weight: 700;
+  color: #000; letter-spacing: .5px;
+  margin-top: 20px;
+  transition: opacity .2s, transform .15s;
+  position: relative; overflow: hidden;
+}
+.btn-submit:hover { opacity: .9; transform: translateY(-1px); }
+.btn-submit:active { transform: scale(.98); }
+.btn-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+/* LOADING SPINNER */
+.spinner {
+  width: 20px; height: 20px;
+  border: 2.5px solid rgba(0,0,0,.3);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: inline-block; vertical-align: middle; margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* QR BOX */
+.qr-box {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 24px auto;
+  width: 220px; height: 220px;
+}
+.qr-box img { width: 100%; height: 100%; object-fit: contain; }
+.qr-placeholder {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  color: #888; font-size: 13px; text-align: center;
+}
+.qr-grid {
+  display: grid; grid-template-columns: repeat(7,1fr); gap: 3px;
+}
+.qr-cell {
+  width: 20px; height: 20px; border-radius: 2px;
+  background: #222;
+  animation: qrBlink 1.5s infinite;
+}
+.qr-cell:nth-child(odd) { animation-delay: .3s; }
+@keyframes qrBlink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* SESSION ID OUTPUT */
+.session-box {
+  background: var(--bg3);
+  border: 1.5px solid var(--border2);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 20px 0;
+  position: relative;
+}
+.session-label {
+  font-size: 10px; font-family: var(--mono);
+  color: var(--muted); letter-spacing: 1px; margin-bottom: 8px;
+}
+.session-value {
+  font-family: var(--mono); font-size: 12px;
+  color: var(--cyan); word-break: break-all; line-height: 1.6;
+}
+.copy-btn {
+  position: absolute; top: 12px; right: 12px;
+  background: rgba(0,229,255,.1);
+  border: 1px solid rgba(0,229,255,.2);
+  color: var(--cyan); font-size: 11px; font-weight: 600;
+  font-family: var(--mono); padding: 4px 10px;
+  border-radius: 6px; cursor: pointer; transition: all .2s;
+  letter-spacing: .5px;
+}
+.copy-btn:hover { background: rgba(0,229,255,.2); }
+.copy-btn.copied { color: var(--green); border-color: var(--green); background: rgba(0,255,148,.1); }
+
+/* SUCCESS STATE */
+.success-icon {
+  width: 64px; height: 64px;
+  background: rgba(0,255,148,.1);
+  border: 2px solid var(--green);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; margin: 0 auto 20px;
+  animation: pop .4s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes pop { from{transform:scale(0)} to{transform:scale(1)} }
+
+/* INFO CARDS */
+.info-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 24px;
+}
+.info-card {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px;
+  text-align: center;
+}
+.info-card .ic-icon { font-size: 22px; margin-bottom: 6px; }
+.info-card .ic-title { font-size: 12px; font-weight: 600; color: var(--text); }
+.info-card .ic-desc  { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+
+/* ALERT */
+.alert {
+  border-radius: 10px; padding: 12px 16px;
+  font-size: 13px; margin: 16px 0;
+  display: flex; gap: 10px; align-items: flex-start;
+  line-height: 1.5;
+}
+.alert-warn { background: rgba(255,214,0,.07); border: 1px solid rgba(255,214,0,.2); color: #ffd600; }
+.alert-info { background: rgba(0,229,255,.07); border: 1px solid rgba(0,229,255,.2); color: var(--cyan); }
+
+/* DIVIDER */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border2), transparent);
+  margin: 24px 0;
+}
+
+/* FOOTER */
+footer {
+  padding: 28px 24px; text-align: center;
+  color: var(--muted); font-size: 12px; line-height: 1.8;
+  border-top: 1px solid var(--border);
+  width: 100%; margin-top: auto;
+}
+footer a { color: var(--cyan); text-decoration: none; }
+footer strong { color: var(--text); font-family: var(--mono); letter-spacing: 1px; }
+
+/* MOBILE */
+@media(max-width:480px) {
+  nav { padding: 14px 20px; }
+  .hero { padding: 48px 20px 32px; }
+  .card { padding: 28px 20px; border-radius: 16px; }
+  .step-line { width: 36px; }
+  .info-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">
+    <div class="logo-pulse"></div>
+    XMD-TECH
+  </div>
+  <div class="nav-tag">⚡ PAIR SESSION</div>
+</nav>
+
+<div class="hero">
+  <div class="hero-eyebrow">📱 WHATSAPP PAIRING</div>
+  <h1>Connect Your<br><span>WhatsApp Number</span></h1>
+  <p>Generate a session ID to link your WhatsApp account to XMD-TECH bot. Takes less than 30 seconds.</p>
+
+  <!-- Steps -->
+  <div class="steps-row">
+    <div class="step-item">
+      <div class="step-circle active" id="s1">1</div>
+      <div class="step-label active" id="sl1">Number</div>
+    </div>
+    <div class="step-line" id="line1"></div>
+    <div class="step-item">
+      <div class="step-circle" id="s2">2</div>
+      <div class="step-label" id="sl2">Verify</div>
+    </div>
+    <div class="step-line" id="line2"></div>
+    <div class="step-item">
+      <div class="step-circle" id="s3">3</div>
+      <div class="step-label" id="sl3">Session</div>
+    </div>
+  </div>
+</div>
+
+<!-- CARD -->
+<div class="card">
+
+  <!-- PANEL 1: Enter number -->
+  <div class="panel active" id="panel1">
+    <div class="field-label">📱 Your WhatsApp Number</div>
+
+    <div class="flag-wrap">
+      <div class="input-wrap">
+        <div class="flag-prefix" id="flagBtn" onclick="toggleDropdown()">
+          <span id="flagEmoji">🇰🇪</span>
+          <span id="dialCode">+254</span>
+          <span style="color:var(--muted);font-size:10px;">▼</span>
+        </div>
+        <input
+          type="tel"
+          class="phone-input"
+          id="phoneInput"
+          placeholder="700 000 000"
+          maxlength="12"
+          inputmode="numeric"
+        />
+      </div>
+      <div class="country-dropdown" id="dropdown">
+        <div class="country-opt" onclick="setCountry('🇰🇪','+254','KE')"><span>🇰🇪</span><span>Kenya</span><span class="dial">+254</span></div>
+        <div class="country-opt" onclick="setCountry('🇳🇬','+234','NG')"><span>🇳🇬</span><span>Nigeria</span><span class="dial">+234</span></div>
+        <div class="country-opt" onclick="setCountry('🇺🇬','+256','UG')"><span>🇺🇬</span><span>Uganda</span><span class="dial">+256</span></div>
+        <div class="country-opt" onclick="setCountry('🇹🇿','+255','TZ')"><span>🇹🇿</span><span>Tanzania</span><span class="dial">+255</span></div>
+        <div class="country-opt" onclick="setCountry('🇿🇦','+27','ZA')"><span>🇿🇦</span><span>South Africa</span><span class="dial">+27</span></div>
+        <div class="country-opt" onclick="setCountry('🇬🇭','+233','GH')"><span>🇬🇭</span><span>Ghana</span><span class="dial">+233</span></div>
+        <div class="country-opt" onclick="setCountry('🇺🇸','+1','US')"><span>🇺🇸</span><span>USA</span><span class="dial">+1</span></div>
+        <div class="country-opt" onclick="setCountry('🇬🇧','+44','GB')"><span>🇬🇧</span><span>UK</span><span class="dial">+44</span></div>
+        <div class="country-opt" onclick="setCountry('🇮🇳','+91','IN')"><span>🇮🇳</span><span>India</span><span class="dial">+91</span></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field-label">🔗 Pairing Method</div>
+    <div class="method-row">
+      <button class="method-btn active" id="mPair" onclick="setMethod('pair')">📱 Pair Code</button>
+      <button class="method-btn" id="mQR" onclick="setMethod('qr')">📷 QR Code</button>
+    </div>
+
+    <div class="alert alert-warn">
+      ⚠️ Use a secondary WhatsApp account. Do not use your personal main number.
+    </div>
+
+    <button class="btn-submit" id="submitBtn" onclick="startPairing()">
+      ⚡ Generate Session ID
+    </button>
+  </div>
+
+  <!-- PANEL 2: Pairing -->
+  <div class="panel" id="panel2">
+    <div style="text-align:center;">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:6px;">Pairing method</div>
+
+      <!-- Pair Code view -->
+      <div id="pairCodeView">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+          Open WhatsApp → Linked Devices → Link with phone number, then enter:
+        </div>
+        <div style="font-family:var(--mono);font-size:40px;font-weight:700;letter-spacing:10px;color:var(--cyan);
+          background:rgba(0,229,255,.06);border:2px solid rgba(0,229,255,.2);
+          border-radius:14px;padding:20px;margin-bottom:20px;" id="pairCodeDisplay">
+          ····
+        </div>
+        <div style="font-size:12px;color:var(--muted);">⏳ Code expires in <span id="countdown" style="color:var(--cyan);font-weight:700;font-family:var(--mono);">60s</span></div>
+      </div>
+
+      <!-- QR Code view -->
+      <div id="qrView" style="display:none;">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+          Open WhatsApp → Linked Devices → Link a Device, then scan:
+        </div>
+        <div class="qr-box">
+          <div class="qr-placeholder">
+            <div class="qr-grid" id="qrGrid"></div>
+            <div style="font-size:11px;color:#aaa;margin-top:8px;">Generating QR...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-info" style="text-align:left;">
+        ℹ️ Keep this page open. Your session ID will appear automatically once linked.
+      </div>
+
+      <button class="btn-submit" style="background:var(--bg3);color:var(--muted);border:1px solid var(--border2);" onclick="resetFlow()">
+        ← Change Number
+      </button>
+    </div>
+  </div>
+
+  <!-- PANEL 3: Success -->
+  <div class="panel" id="panel3">
+    <div style="text-align:center;">
+      <div class="success-icon">✅</div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:8px;">Session Generated!</div>
+      <div style="font-size:14px;color:var(--muted);margin-bottom:24px;">
+        Copy your session ID below and paste it into your Railway environment variables.
+      </div>
+
+      <div class="session-box">
+        <div class="session-label">SESSION_ID</div>
+        <div class="session-value" id="sessionValue">XMD-TECH_••••••••••••••••••••••••••••••••••••••••••••••••••</div>
+        <button class="copy-btn" id="copyBtn" onclick="copySession()">COPY</button>
+      </div>
+
+      <div class="alert alert-warn" style="text-align:left;">
+        ⚠️ Keep this ID private. Anyone with it can control your WhatsApp bot.
+      </div>
+
+      <div class="divider"></div>
+
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px;text-align:left;">Next steps:</div>
+      <div style="display:flex;flex-direction:column;gap:8px;text-align:left;">
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:13px;">
+          <span style="color:var(--cyan);font-family:var(--mono);font-weight:700;">1.</span> Go to your Railway project
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:13px;">
+          <span style="color:var(--cyan);font-family:var(--mono);font-weight:700;">2.</span> Open <b>Variables</b> tab
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:13px;">
+          <span style="color:var(--cyan);font-family:var(--mono);font-weight:700;">3.</span> Set <code style="color:var(--cyan);font-family:var(--mono);">SESSION_ID</code> = your copied value
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:13px;">
+          <span style="color:var(--cyan);font-family:var(--mono);font-weight:700;">4.</span> Deploy → your bot goes live ⚡
+        </div>
+      </div>
+
+      <button class="btn-submit" onclick="resetFlow()" style="margin-top:24px;">
+        🔄 Pair Another Number
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Info row -->
+<div style="width:100%;max-width:480px;padding:0 24px;">
+  <div class="info-row">
+    <div class="info-card">
+      <div class="ic-icon">🔒</div>
+      <div class="ic-title">Secure</div>
+      <div class="ic-desc">Session IDs are never stored on our servers</div>
+    </div>
+    <div class="info-card">
+      <div class="ic-icon">⚡</div>
+      <div class="ic-title">Instant</div>
+      <div class="ic-desc">Ready to deploy in under 30 seconds</div>
+    </div>
+    <div class="info-card">
+      <div class="ic-icon">🌍</div>
+      <div class="ic-title">Any Number</div>
+      <div class="ic-desc">Works with any WhatsApp number worldwide</div>
+   
