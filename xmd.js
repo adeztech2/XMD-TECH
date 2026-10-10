@@ -13,7 +13,6 @@ const {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
-  makeInMemoryStore,
   jidDecode,
   proto,
   getContentType,
@@ -38,11 +37,19 @@ const VERSION      = '2.0.0';
 
 const OWNER_JID = OWNER_NUMBER.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
 
-// ─── STORE ───────────────────────────────────────────────────────────────────
+// ─── MESSAGE CACHE (replaces makeInMemoryStore) ──────────────────────────────
 
-const store = makeInMemoryStore({
-  logger: pino({ level: 'silent' }),
-});
+const msgCache = new Map();
+const MSG_CACHE_LIMIT = 2000;
+
+function cacheMessage(m) {
+  if (!m?.message || !m.key?.id) return;
+  msgCache.set(m.key.id, m.message);
+  if (msgCache.size > MSG_CACHE_LIMIT) {
+    const oldest = msgCache.keys().next().value;
+    msgCache.delete(oldest);
+  }
+}
 
 // ─── LOGGER ──────────────────────────────────────────────────────────────────
 
@@ -70,8 +77,9 @@ async function react(sock, msg, emoji) {
   });
 }
 
-async function reply(sock, msg, text) {
-  return sock.sendMessage(msg.key.remoteJid, { text }, { quoted: msg });
+// extra lets you pass e.g. { mentions: [jid] }
+async function reply(sock, msg, text, extra = {}) {
+  return sock.sendMessage(msg.key.remoteJid, { text, ...extra }, { quoted: msg });
 }
 
 async function sendText(sock, jid, text) {
@@ -635,7 +643,6 @@ cmd('groupinfo', async ({ sock, msg, jid, isGroupMsg }) => {
 cmd('revoke', async ({ sock, msg, jid, isGroupMsg }) => {
   if (!isGroupMsg) return reply(sock, msg, '❌ Group only command');
   try {
-    const code = await sock.groupInviteCode(jid);
     await sock.groupRevokeInvite(jid);
     const newCode = await sock.groupInviteCode(jid);
     await reply(sock, msg, `🔗 *Invite link reset!*\n\nhttps://chat.whatsapp.com/${newCode}`);
@@ -684,7 +691,8 @@ cmd('warn', async ({ sock, msg, args, text, jid, isGroupMsg }) => {
   await reply(sock, msg,
     `⚠️ *Warning ${count}/3*\n\n` +
     `@${target.split('@')[0]} — ${reason}\n` +
-    `_${3 - count} more warning(s) will result in removal._`
+    `_${3 - count} more warning(s) will result in removal._`,
+    { mentions: [target] }
   );
 });
 
@@ -723,7 +731,7 @@ cmd('mpesa', async ({ sock, msg, args }) => {
   const amount = parseFloat(args[1]);
   if (!action || !amount) return reply(sock, msg, `Usage: ${PREFIX}mpesa send 5000`);
 
-  // M-Pesa 2024 tariffs (approximate)
+  // M-Pesa tariffs (approximate)
   const tariff = (amt) => {
     if (amt <= 100)    return { send: 0,  withdraw: 10  };
     if (amt <= 500)    return { send: 7,  withdraw: 28  };
@@ -764,9 +772,8 @@ cmd('kplc', async ({ sock, msg, text }) => {
 cmd('calc', async ({ sock, msg, text }) => {
   if (!text) return reply(sock, msg, `Usage: ${PREFIX}calc 25 * 4 + 10`);
   try {
-    // Safe eval using mathjs-like approach
-    const sanitized = text.replace(/[^0-9+\-*/.() %^]/g, '');
-    const result    = Function(`"use strict"; return (${sanitized})`)();
+    const { evaluate } = require('mathjs');
+    const result = evaluate(text);
     await reply(sock, msg, `🔢 *Calculator*\n\n${text}\n= *${result}*`);
   } catch (e) {
     await reply(sock, msg, `❌ Invalid expression: ${text}`);
@@ -824,9 +831,10 @@ cmd('track', async ({ sock, msg, text }) => {
 });
 
 cmd('password', async ({ sock, msg, args }) => {
-  const length = parseInt(args[0]) || 16;
+  const length = Math.min(parseInt(args[0]) || 16, 64);
   const chars  = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}';
-  const pwd    = Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  const bytes  = require('crypto').randomBytes(length);
+  const pwd    = Array.from(bytes, b => chars[b % chars.length]).join('');
   await reply(sock, msg, `🔐 *Generated Password (${length} chars)*\n\n\`${pwd}\`\n\n_Keep this safe!_`);
 });
 
@@ -898,8 +906,8 @@ cmd('tts', async ({ sock, msg, args, text }) => {
   const lang = args[0]?.length === 2 ? args[0] : 'en';
   const ttsText = lang === args[0] ? args.slice(1).join(' ') : text;
   try {
-    const { GoogleTTS } = require('google-tts-api');
-    const url = GoogleTTS.getAudioUrl(ttsText || text, { lang, slow: false, host: 'https://translate.google.com' });
+    const { getAudioUrl } = require('google-tts-api');
+    const url = getAudioUrl(ttsText || text, { lang, slow: false, host: 'https://translate.google.com' });
     const res = await axios.get(url, { responseType: 'arraybuffer' });
     await sock.sendMessage(msg.key.remoteJid, {
       audio:    Buffer.from(res.data),
@@ -1023,7 +1031,7 @@ cmd('riddle', async ({ sock, msg }) => {
 cmd('answer', async ({ sock, msg, jid }) => {
   const key  = jid + '_riddle';
   const data = triviaStore[key];
-  if (!data) return reply(sock, msg, '❌ No active riddle. Start one with ${PREFIX}riddle');
+  if (!data) return reply(sock, msg, `❌ No active riddle. Start one with ${PREFIX}riddle`);
   await reply(sock, msg, `💡 *Answer:* ${data.answer}`);
   delete triviaStore[key];
 });
@@ -1128,7 +1136,8 @@ cmd('ping', async ({ sock, msg }) => {
   const ms    = Date.now() - start;
   await sock.sendMessage(msg.key.remoteJid, {
     text: `🏓 *Pong!*\n\n⚡ Speed: *${ms}ms*\n🔋 RAM: ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1)}MB\n⏱ Uptime: ${Math.floor(process.uptime())}s`,
-  }, { edit: sent.key });
+    edit: sent.key,
+  });
 });
 
 cmd('botinfo', async ({ sock, msg }) => {
@@ -1144,7 +1153,7 @@ cmd('botinfo', async ({ sock, msg }) => {
     `⏱ Uptime: ${h}h ${m}m\n` +
     `🔋 RAM: ${ram}MB\n` +
     `🟢 Status: Online\n` +
-    `📦 Commands: 74+\n` +
+    `📦 Commands: ${Object.keys(commands).length}\n` +
     `🌍 Platform: ${detectPlatform()}\n` +
     `⚙️ Node: ${process.version}`
   );
@@ -1175,7 +1184,7 @@ cmd('notify', async ({ sock, msg, args }) => {
 cmd('stats', async ({ sock, msg }) => {
   await reply(sock, msg,
     `📊 *${BOT_NAME} Stats*\n\n` +
-    `📦 Total Commands: 74\n` +
+    `📦 Total Commands: ${Object.keys(commands).length}\n` +
     `🟢 Bot Status: Online\n` +
     `⏱ Uptime: ${Math.floor(process.uptime() / 60)}m\n` +
     `🌍 Built by: ADEZ Tech · Nairobi`
@@ -1222,21 +1231,27 @@ async function startBot() {
 
   const sock = makeWASocket({
     version,
-    auth:          state,
-    logger:        pino({ level: 'silent' }),
-    printQRInTerminal: true,
-    browser:       ['XMD-TECH', 'Chrome', '120.0.0'],
+    auth:                state,
+    logger:              pino({ level: 'silent' }),
+    browser:             ['XMD-TECH', 'Chrome', '120.0.0'],
     markOnlineOnConnect: true,
+    getMessage:          async (key) => msgCache.get(key.id),
   });
-
-  store.bind(sock.ev);
 
   // ── CREDS ────────────────────────────────────────────────────────────────
   sock.ev.on('creds.update', saveCreds);
 
+  // ── MESSAGE CACHE ────────────────────────────────────────────────────────
+  sock.ev.on('messages.upsert', ({ messages }) => {
+    for (const m of messages) cacheMessage(m);
+  });
+
   // ── CONNECTION UPDATE ─────────────────────────────────────────────────────
   sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
-    if (qr) log('Scan the QR code above to connect.', 'warn');
+    if (qr) {
+      require('qrcode-terminal').generate(qr, { small: true });
+      log('Scan the QR code above to connect.', 'warn');
+    }
 
     if (connection === 'open') {
       log(`Connected as ${sock.user?.name || sock.user?.id}`, 'success');
@@ -1368,7 +1383,7 @@ async function startBot() {
       } catch (err) {
         log(`Message handler error: ${err.message}`, 'error');
         try {
-          await reply(sock, messages[0], `❌ Error: ${err.message}`);
+          await reply(sock, msg, `❌ Error: ${err.message}`);
         } catch (_) {}
       }
     }
